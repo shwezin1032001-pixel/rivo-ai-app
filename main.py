@@ -199,7 +199,7 @@ async def auto_transcribe_script(file: UploadFile = File(...)):
             - Voiceover အဖြစ် တန်းဖတ်ရုံ မြန်မာစာသားများ သာ သဘာဝကျကျ ထုတ်ပေးပါ။
             """
             response = client.models.generate_content(
-                model="gemini-2.5-flash",
+                model="gemini-2.0-flash",
                 contents=[gemini_file, prompt]
             )
             script = response.text.strip()
