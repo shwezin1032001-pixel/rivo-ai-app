@@ -6,7 +6,6 @@ import uuid
 import os
 import shutil
 import subprocess
-import json
 
 app = FastAPI(title="TikTok AI Myanmar Voiceover Only")
 
@@ -21,15 +20,14 @@ async def get_ui():
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>TikTok AI Myanmar Voiceover Only</title>
+        <title>TikTok AI Myanmar Voiceover Tool</title>
         <script src="https://cdn.tailwindcss.com"></script>
         <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     </head>
     <body class="bg-[#f8f9fa] text-gray-800 font-sans p-4 max-w-md mx-auto min-h-screen pb-16">
-        
         <div class="text-center my-4">
             <h1 class="text-xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-purple-600 flex items-center justify-center gap-2">
-                <i class="fa-brands fa-tiktok text-black text-2xl"></i> TikTok AI Myanmar Voiceover Only
+                <i class="fa-brands fa-tiktok text-black text-2xl"></i> TikTok AI Myanmar Voiceover
             </h1>
         </div>
 
@@ -38,7 +36,7 @@ async def get_ui():
             <div class="text-purple-500 text-3xl mb-2">
                 <i class="fa-solid fa-cloud-arrow-up"></i>
             </div>
-            <p id="file-label" class="text-xs font-bold text-gray-700">📹 ရွေးချယ်ရန် ဗီဒီယို တင်ပါ (Chinese/English Video)</p>
+            <p id="file-label" class="text-xs font-bold text-gray-700">📹 ရွေးချယ်ရန် ဗီဒီယို တင်ပါ (English/Chinese Video)</p>
             <p class="text-[10px] text-gray-400 mt-1">MP4, MOV supported</p>
         </div>
 
@@ -46,7 +44,6 @@ async def get_ui():
             <h3 class="text-xs font-bold text-gray-700 flex items-center gap-1.5 border-b pb-2">
                 <i class="fa-solid fa-sliders text-purple-600"></i> Voice & Video Settings
             </h3>
-
             <div>
                 <label class="text-[11px] font-bold text-gray-600 block mb-1">🗣️ AI အသံ ရွေးချယ်ရန်</label>
                 <select id="voice-type" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs font-medium text-gray-700 focus:outline-none focus:border-purple-500">
@@ -54,7 +51,6 @@ async def get_ui():
                     <option value="my-MM-ThihaNeural">ယောက်ျားလေးသံ (Thiha)</option>
                 </select>
             </div>
-
             <div>
                 <div class="flex justify-between text-[11px] font-bold text-gray-600 mb-1">
                     <span>📍 မူရင်းစာတန်းဖျောက်မည့် နေရာ (Height %)</span>
@@ -99,7 +95,7 @@ async def get_ui():
                 statusCard.classList.remove('hidden');
                 scriptPreview.classList.add('hidden');
                 resultBox.innerHTML = '';
-                statusText.innerText = "⏳ ဗီဒီယို အစအဆုံးကို နားထောင်ပြီး မြန်မာ Voiceover အပြည့်အစုံ ဖန်တီးနေပါသည် (၁ မိနစ်ခန့် ကြာနိုင်ပါသည်)...";
+                statusText.innerText = "⏳ AI က ဗီဒီယိုကို ဘာသာပြန်ပြီး အပြည့်အစုံ အသံသွင်းနေပါသည်...";
 
                 const formData = new FormData();
                 formData.append("file", selectedFile);
@@ -123,14 +119,14 @@ async def get_ui():
                                 <source src="/get-file/${data.output_video}" type="video/mp4">
                             </video>
                             <a href="/get-file/${data.output_video}" download class="inline-flex items-center gap-1 mt-3 bg-purple-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow hover:bg-purple-700 transition">
-                                <i class="fa-solid fa-download"></i> ထွက်လာသည့် ရလဒ် ဗီဒီယို (AI Voice Only) ဒေါင်းမည်
+                                <i class="fa-solid fa-download"></i> Recap Video ဒေါင်းလုဒ်ဆွဲရန်
                             </a>
                         `;
                     } else {
                         statusText.innerText = "❌ အမှားဖြစ်သွားပါသည်: " + data.error;
                     }
                 } catch(e) {
-                    statusText.innerText = "❌ စနစ် ချိတ်ဆက်မှု မအောင်မြင်ပါ";
+                    statusText.innerText = "❌ Server အလုပ်လုပ်ချိန် ကြာသွားပါသည်၊ ပြန်လည် စမ်းသပ်ပေးပါ";
                 } finally {
                     btn.disabled = false;
                     btn.classList.remove('opacity-50');
@@ -153,43 +149,44 @@ async def perfect_sync_voiceover(
     voice: str = Form("my-MM-NilarNeural"),
     blur_height: int = Form(75)
 ):
-    try:
-        session_id = uuid.uuid4().hex[:8]
-        input_vid = f"in_{session_id}.mp4"
-        audio_path = f"audio_{session_id}.mp3"
-        output_vid = f"tiktok_recap_{session_id}.mp4"
+    session_id = uuid.uuid4().hex[:8]
+    input_vid = f"in_{session_id}.mp4"
+    extracted_audio = f"temp_aud_{session_id}.mp3"
+    audio_path = f"audio_{session_id}.mp3"
+    output_vid = f"tiktok_recap_{session_id}.mp4"
 
+    try:
         with open(input_vid, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
 
-        # 1. AI Full Voiceover Transcription & Dubbing
+        # 1. Extract audio from video first (Saves RAM & Bandwidth)
+        subprocess.run(["ffmpeg", "-y", "-i", input_vid, "-vn", "-ar", "16000", "-ac", "1", extracted_audio], check=True)
+
+        # 2. AI Script Generation from Audio
         script = ""
-        if client:
+        if client and os.path.exists(extracted_audio):
             try:
-                gemini_file = client.files.upload(file=input_vid)
+                gemini_file = client.files.upload(file=extracted_audio)
                 prompt = """
-                ဤဗီဒီယိုဖိုင်ကို အစအဆုံး သေချာကြည့်ရှု/နားထောင်ပါ။ ဇာတ်လမ်းကို အတိုချုံ့ခြင်း (Summary) လုံးဝ မလုပ်ပါနှင့်။
-                
-                ဗီဒီယိုထဲတွင် ပါဝင်သော ဇာတ်ကောင်ပြောစကားများနှင့် အဖြစ်အပျက်တစ်ခုချင်းစီကို အစမှ အဆုံးအထိ ကွက်တိလိုက်ဖတ်နိုင်ရန် TikTok Short Drama စတိုင် မြန်မာဘာသာပြန် စကားပြော ဇာတ်ညွှန်းအဖြစ် အပြည့်အစုံ ရေးသားပေးပါ။
-                
-                ဥပမာ - ဇာတ်ကောင် ပြောသည့် စကားများနှင့် ခံစားချက်များကို စကားပြောဟန်ဖြင့် အစအဆုံး အစီအစဉ်တကျ ရေးပေးပါ (နိဒါန်း၊ ခေါင်းစဉ်များ လုံးဝ မပါရ၊ Voiceover ဖတ်ရန် သက်သက်သာ)။
+                ဤအသံဖိုင်ထဲတွင် ပါဝင်သော စကားပြောများနှင့် အဖြစ်အပျက်များကို အစမှ အဆုံးအထိ နားထောင်ပြီး TikTok Short Drama Recap စတိုင် မြန်မာစကားပြော ဇာတ်ညွှန်းအဖြစ် အပြည့်အစုံ ရေးသားပေးပါ။
+                ဇာတ်လမ်းကို အတိုချုံ့ခြင်း လုံးဝ မလုပ်ပါနှင့်။ ဇာတ်ကောင် ပြောသည့် စကားများနှင့် ခံစားချက်များကို စကားပြောဟန်ဖြင့် အစအဆုံး Voiceover အဖြစ် ဖတ်ရန် သက်သက်သာ ရေးပေးပါ။
                 """
                 response = client.models.generate_content(
                     model="gemini-2.0-flash",
                     contents=[gemini_file, prompt]
                 )
                 script = response.text.strip()
-            except Exception as ex:
+            except Exception:
                 script = ""
 
         if not script:
-            script = "ဒီဇာတ်ကားထဲမှာတော့ မမျှော်လင့်ဘဲ အံ့သြဖွယ် အဖြစ်အပျက်တွေ ဆက်တိုက် ဖြစ်ပေါ်လာခဲ့ပါတယ်။"
+            script = "သေလိုက်တော့... ငါ့အနား မလာနဲ့။ ဒီအမှတ်အသားက အိမ်မက်ထဲက ယောက်ျားနဲ့ တစ်ထေရာတည်း တူနေတယ်။ မင်း အခု ငါ့လက်ထဲက မလွတ်တော့ဘူး။"
 
-        # 2. TTS Voiceover
+        # 3. TTS Voiceover Generation
         communicate = edge_tts.Communicate(script, voice)
         await communicate.save(audio_path)
 
-        # 3. FFmpeg Processing (Blur Subtitle, Strip Original Audio, Add AI Voice)
+        # 4. FFmpeg Video Merge & Blur Subtitle
         h_ratio = round(blur_height / 100.0, 2)
         crop_h = round(1.0 - h_ratio, 2)
 
@@ -208,6 +205,10 @@ async def perfect_sync_voiceover(
             output_vid
         ]
         subprocess.run(cmd, check=True)
+
+        # Clean temporary files
+        if os.path.exists(extracted_audio):
+            os.remove(extracted_audio)
 
         return {"success": True, "script": script, "output_video": output_vid}
     except Exception as e:
