@@ -6,8 +6,9 @@ import uuid
 import os
 import shutil
 import subprocess
+import json
 
-app = FastAPI(title="TikTok AI Myanmar Voiceover Tool")
+app = FastAPI(title="TikTok AI Myanmar Voiceover Only")
 
 api_key = os.environ.get("GEMINI_API_KEY", "")
 client = genai.Client(api_key=api_key) if api_key else None
@@ -37,7 +38,7 @@ async def get_ui():
             <div class="text-purple-500 text-3xl mb-2">
                 <i class="fa-solid fa-cloud-arrow-up"></i>
             </div>
-            <p id="file-label" class="text-xs font-bold text-gray-700">ရွေးချယ်ရန် ဗီဒီယို တင်ပါ (English/Chinese Video)</p>
+            <p id="file-label" class="text-xs font-bold text-gray-700">📹 ရွေးချယ်ရန် ဗီဒီယို တင်ပါ (Chinese/English Video)</p>
             <p class="text-[10px] text-gray-400 mt-1">MP4, MOV supported</p>
         </div>
 
@@ -56,18 +57,10 @@ async def get_ui():
 
             <div>
                 <div class="flex justify-between text-[11px] font-bold text-gray-600 mb-1">
-                    <span>⚡ ဗီဒီယိုနှင့် အသံ၏ အရှိန် (Speed)</span>
-                    <span id="speed-val" class="text-purple-600 font-bold">1x</span>
-                </div>
-                <input type="range" id="speed-range" min="0.8" max="1.5" step="0.1" value="1" oninput="document.getElementById('speed-val').innerText = this.value + 'x'" class="w-full accent-purple-600 cursor-pointer">
-            </div>
-
-            <div>
-                <div class="flex justify-between text-[11px] font-bold text-gray-600 mb-1">
                     <span>📍 မူရင်းစာတန်းဖျောက်မည့် နေရာ (Height %)</span>
                     <span id="height-val" class="text-purple-600 font-bold">75%</span>
                 </div>
-                <input type="range" id="blur-height" min="50" max="90" step="1" value="75" oninput="document.getElementById('height-val').innerText = this.value + '%'" class="w-full accent-purple-600 cursor-pointer">
+                <input type="range" id="blur-height" min="50" max="95" step="1" value="75" oninput="document.getElementById('height-val').innerText = this.value + '%'" class="w-full accent-purple-600 cursor-pointer">
             </div>
         </div>
 
@@ -77,6 +70,7 @@ async def get_ui():
 
         <div id="status-card" class="mt-4 hidden bg-white rounded-2xl p-4 shadow-sm border border-purple-100 text-center">
             <p id="status-text" class="text-xs font-semibold text-purple-600 mb-2">လုပ်ဆောင်နေပါသည်...</p>
+            <div id="script-preview" class="text-[11px] text-left bg-gray-50 p-3 rounded-xl max-h-36 overflow-y-auto mb-3 hidden border border-gray-200"></div>
             <div id="result-box"></div>
         </div>
 
@@ -97,18 +91,19 @@ async def get_ui():
                 const btn = document.getElementById('btn-submit');
                 const statusCard = document.getElementById('status-card');
                 const statusText = document.getElementById('status-text');
+                const scriptPreview = document.getElementById('script-preview');
                 const resultBox = document.getElementById('result-box');
 
                 btn.disabled = true;
                 btn.classList.add('opacity-50');
                 statusCard.classList.remove('hidden');
+                scriptPreview.classList.add('hidden');
                 resultBox.innerHTML = '';
-                statusText.innerText = "⏳ AI က ဗီဒီယိုကို နားထောင်ပြီး Myanmar Voiceover စတင် ပေါင်းစပ်နေပါသည်...";
+                statusText.innerText = "⏳ ဗီဒီယို အစအဆုံးကို နားထောင်ပြီး မြန်မာ Voiceover အပြည့်အစုံ ဖန်တီးနေပါသည် (၁ မိနစ်ခန့် ကြာနိုင်ပါသည်)...";
 
                 const formData = new FormData();
                 formData.append("file", selectedFile);
                 formData.append("voice", document.getElementById('voice-type').value);
-                formData.append("speed", document.getElementById('speed-range').value);
                 formData.append("blur_height", document.getElementById('blur-height').value);
 
                 try {
@@ -119,6 +114,10 @@ async def get_ui():
                     const data = await res.json();
                     if (data.success) {
                         statusText.innerText = "✅ Perfect Sync Voiceover ပြီးစီးပါပြီ!";
+                        if (data.script) {
+                            scriptPreview.classList.remove('hidden');
+                            scriptPreview.innerHTML = "<b>🎬 AI Myanmar Voiceover Script:</b><br>" + data.script.replace(/\\n/g, '<br>');
+                        }
                         resultBox.innerHTML = `
                             <video controls class="w-full rounded-xl border mt-2 shadow-inner" autoplay>
                                 <source src="/get-file/${data.output_video}" type="video/mp4">
@@ -152,7 +151,6 @@ def get_file(filename: str):
 async def perfect_sync_voiceover(
     file: UploadFile = File(...),
     voice: str = Form("my-MM-NilarNeural"),
-    speed: float = Form(1.0),
     blur_height: int = Form(75)
 ):
     try:
@@ -164,28 +162,34 @@ async def perfect_sync_voiceover(
         with open(input_vid, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
 
-        # 1. AI Script Generation
+        # 1. AI Full Voiceover Transcription & Dubbing
         script = ""
         if client:
             try:
                 gemini_file = client.files.upload(file=input_vid)
-                prompt = "ဤဗီဒီယိုထဲတွင် ပါဝင်သော စကားပြောများနှင့် အခြေအနေကို နားထောင်ပြီး TikTok Short Drama Recap ပုံစံဖြင့် မြန်မာစကားပြော ဇာတ်ညွှန်းအဖြစ် ရေးပေးပါ။ နိဒါန်း ခေါင်းစဉ်များ မပါဘဲ Voiceover ဖတ်ရန် သက်သက်သာ ရေးပေးပါ။"
+                prompt = """
+                ဤဗီဒီယိုဖိုင်ကို အစအဆုံး သေချာကြည့်ရှု/နားထောင်ပါ။ ဇာတ်လမ်းကို အတိုချုံ့ခြင်း (Summary) လုံးဝ မလုပ်ပါနှင့်။
+                
+                ဗီဒီယိုထဲတွင် ပါဝင်သော ဇာတ်ကောင်ပြောစကားများနှင့် အဖြစ်အပျက်တစ်ခုချင်းစီကို အစမှ အဆုံးအထိ ကွက်တိလိုက်ဖတ်နိုင်ရန် TikTok Short Drama စတိုင် မြန်မာဘာသာပြန် စကားပြော ဇာတ်ညွှန်းအဖြစ် အပြည့်အစုံ ရေးသားပေးပါ။
+                
+                ဥပမာ - ဇာတ်ကောင် ပြောသည့် စကားများနှင့် ခံစားချက်များကို စကားပြောဟန်ဖြင့် အစအဆုံး အစီအစဉ်တကျ ရေးပေးပါ (နိဒါန်း၊ ခေါင်းစဉ်များ လုံးဝ မပါရ၊ Voiceover ဖတ်ရန် သက်သက်သာ)။
+                """
                 response = client.models.generate_content(
-                    model="gemini-2.5-flash",
+                    model="gemini-2.0-flash",
                     contents=[gemini_file, prompt]
                 )
                 script = response.text.strip()
-            except Exception:
-                script = "ဒီဇာတ်ကားထဲမှာတော့ မမျှော်လင့်ဘဲ စိတ်လှုပ်ရှားဖွယ် အဖြစ်အပျက်တွေနဲ့ ကြုံတွေ့ခဲ့ရပါတယ်။"
+            except Exception as ex:
+                script = ""
 
         if not script:
-            script = "ဒီဇာတ်ကားထဲမှာတော့ မမျှော်လင့်ဘဲ စိတ်လှုပ်ရှားဖွယ် အဖြစ်အပျက်တွေနဲ့ ကြုံတွေ့ခဲ့ရပါတယ်။"
+            script = "ဒီဇာတ်ကားထဲမှာတော့ မမျှော်လင့်ဘဲ အံ့သြဖွယ် အဖြစ်အပျက်တွေ ဆက်တိုက် ဖြစ်ပေါ်လာခဲ့ပါတယ်။"
 
         # 2. TTS Voiceover
         communicate = edge_tts.Communicate(script, voice)
         await communicate.save(audio_path)
 
-        # 3. FFmpeg Processing
+        # 3. FFmpeg Processing (Blur Subtitle, Strip Original Audio, Add AI Voice)
         h_ratio = round(blur_height / 100.0, 2)
         crop_h = round(1.0 - h_ratio, 2)
 
@@ -201,11 +205,10 @@ async def perfect_sync_voiceover(
             "-c:v", "libx264",
             "-preset", "ultrafast",
             "-c:a", "aac",
-            "-shortest",
             output_vid
         ]
         subprocess.run(cmd, check=True)
 
-        return {"success": True, "output_video": output_vid}
+        return {"success": True, "script": script, "output_video": output_vid}
     except Exception as e:
         return {"success": False, "error": str(e)}
