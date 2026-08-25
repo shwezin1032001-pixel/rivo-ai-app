@@ -1,14 +1,13 @@
 from fastapi import FastAPI, HTTPException, Form, UploadFile, File
 from fastapi.responses import HTMLResponse, FileResponse
 from google import genai
-from google.genai import types
 import edge_tts
 import uuid
 import os
 import shutil
 import subprocess
 
-app = FastAPI(title="Auto Video Understanding & Movie Recap AI")
+app = FastAPI(title="TikTok AI Myanmar Voiceover Tool")
 
 api_key = os.environ.get("GEMINI_API_KEY", "")
 client = genai.Client(api_key=api_key) if api_key else None
@@ -21,150 +20,121 @@ async def get_ui():
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Auto Movie Recap AI Studio</title>
+        <title>TikTok AI Myanmar Voiceover Only</title>
         <script src="https://cdn.tailwindcss.com"></script>
         <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     </head>
-    <body class="bg-[#0b0e14] text-white font-sans p-4 max-w-md mx-auto min-h-screen pb-16">
-        <div class="flex justify-between items-center mb-5">
-            <div class="flex items-center gap-2">
-                <i class="fa-solid fa-clapperboard text-red-500 text-xl"></i>
-                <h1 class="text-md font-bold">Auto Movie Recap Studio</h1>
-            </div>
-            <span class="bg-red-900/40 text-red-400 border border-red-500/30 text-xs px-3 py-1 rounded-full font-semibold">Gemini AI Vision</span>
+    <body class="bg-[#f8f9fa] text-gray-800 font-sans p-4 max-w-md mx-auto min-h-screen pb-16">
+        
+        <div class="text-center my-4">
+            <h1 class="text-xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-purple-600 flex items-center justify-center gap-2">
+                <i class="fa-brands fa-tiktok text-black text-2xl"></i> TikTok AI Myanmar Voiceover Only
+            </h1>
         </div>
 
-        <div class="bg-[#151a23] border border-gray-800 rounded-2xl p-5 mb-4 text-center cursor-pointer relative hover:border-red-500/50 transition">
-            <input type="file" id="video-file" accept="video/*" class="absolute inset-0 opacity-0 cursor-pointer w-full h-full" onchange="handleVideoUpload()">
-            <div class="w-12 h-12 bg-red-600/20 text-red-500 rounded-full flex items-center justify-center mx-auto mb-2 text-xl">
+        <div class="border-2 border-dashed border-purple-300 bg-purple-50/50 rounded-2xl p-6 text-center cursor-pointer relative hover:bg-purple-50 transition mb-4 shadow-sm">
+            <input type="file" id="video-file" accept="video/*" class="absolute inset-0 opacity-0 cursor-pointer w-full h-full" onchange="handleFileSelect()">
+            <div class="text-purple-500 text-3xl mb-2">
                 <i class="fa-solid fa-cloud-arrow-up"></i>
             </div>
-            <p id="upload-label" class="text-xs font-semibold text-gray-300">Tap to Upload Source Video</p>
-            <p class="text-[10px] text-gray-500 mt-1">MP4, MOV supported</p>
+            <p id="file-label" class="text-xs font-bold text-gray-700">ရွေးချယ်ရန် ဗီဒီယို တင်ပါ (English/Chinese Video)</p>
+            <p class="text-[10px] text-gray-400 mt-1">MP4, MOV supported</p>
         </div>
 
-        <button id="btn-generate-script" onclick="generateAIScript()" class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 font-bold py-3 rounded-xl text-xs mb-4 flex items-center justify-center gap-2 shadow-lg">
-            <i class="fa-solid fa-wand-magic-sparkles"></i> 🪄 ဗီဒီယိုထဲမှ AI ဇာတ်ညွှန်း အလိုအလျောက် ထုတ်ယူမည်
-        </button>
+        <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 mb-4 space-y-4">
+            <h3 class="text-xs font-bold text-gray-700 flex items-center gap-1.5 border-b pb-2">
+                <i class="fa-solid fa-sliders text-purple-600"></i> Voice & Video Settings
+            </h3>
 
-        <div class="bg-[#151a23] border border-gray-800 rounded-2xl p-4 mb-4">
-            <label class="text-xs font-bold text-gray-300 block mb-2 flex items-center gap-1">
-                <i class="fa-solid fa-pen-nib text-yellow-400"></i> Recap Script (မြန်မာဇာတ်ညွှန်း)
-            </label>
-            <textarea id="recap-script" rows="4" class="w-full bg-[#0b0e14] border border-gray-700 rounded-xl p-3 text-xs focus:outline-none focus:border-red-500 text-gray-200" placeholder="အပေါ်က 'AI ဇာတ်ညွှန်းထုတ်ယူမည်' ကို နှိပ်ပါ သို့မဟုတ် ကိုယ်တိုင် စာသားပြင်ဆင်ပါ..."></textarea>
-        </div>
-
-        <div class="bg-[#151a23] border border-gray-800 rounded-2xl p-4 mb-4 text-xs space-y-3">
-            <div class="flex justify-between items-center">
-                <span>အသံအမျိုးအစား</span>
-                <select id="voice-type" class="bg-[#0b0e14] border border-gray-700 rounded-lg px-2 py-1 text-xs text-white">
-                    <option value="my-MM-ThihaNeural">မြန်မာ (အမျိုးသားသံ - Thiha)</option>
-                    <option value="my-MM-NilarNeural">မြန်မာ (အမျိုးသမီးသံ - Nilar)</option>
+            <div>
+                <label class="text-[11px] font-bold text-gray-600 block mb-1">🗣️ AI အသံ ရွေးချယ်ရန်</label>
+                <select id="voice-type" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs font-medium text-gray-700 focus:outline-none focus:border-purple-500">
+                    <option value="my-MM-NilarNeural">မိန်းကလေးသံ (Nilar)</option>
+                    <option value="my-MM-ThihaNeural">ယောက်ျားလေးသံ (Thiha)</option>
                 </select>
             </div>
-            <label class="flex justify-between items-center">
-                <span>စာတန်းဟောင်း ဖုံးအုပ်မည် (Blur Subtitle)</span>
-                <input type="checkbox" id="blur-sub" checked class="w-4 h-4 accent-red-500 rounded">
-            </label>
-            <label class="flex justify-between items-center">
-                <span>ဗီဒီယို ဘယ်/ညာ လှန်မည် (Flip)</span>
-                <input type="checkbox" id="flip-video" class="w-4 h-4 accent-red-500 rounded">
-            </label>
+
+            <div>
+                <div class="flex justify-between text-[11px] font-bold text-gray-600 mb-1">
+                    <span>⚡ ဗီဒီယိုနှင့် အသံ၏ အရှိန် (Speed)</span>
+                    <span id="speed-val" class="text-purple-600 font-bold">1x</span>
+                </div>
+                <input type="range" id="speed-range" min="0.8" max="1.5" step="0.1" value="1" oninput="document.getElementById('speed-val').innerText = this.value + 'x'" class="w-full accent-purple-600 cursor-pointer">
+            </div>
+
+            <div>
+                <div class="flex justify-between text-[11px] font-bold text-gray-600 mb-1">
+                    <span>📍 မူရင်းစာတန်းဖျောက်မည့် နေရာ (Height %)</span>
+                    <span id="height-val" class="text-purple-600 font-bold">75%</span>
+                </div>
+                <input type="range" id="blur-height" min="50" max="90" step="1" value="75" oninput="document.getElementById('height-val').innerText = this.value + '%'" class="w-full accent-purple-600 cursor-pointer">
+            </div>
         </div>
 
-        <button onclick="renderRecapVideo()" class="w-full bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-500 hover:to-amber-500 font-bold py-3.5 rounded-2xl text-sm transition shadow-lg flex items-center justify-center gap-2">
-            <i class="fa-solid fa-film"></i> ✨ Render Recap Video
+        <button id="btn-submit" onclick="startProcess()" class="w-full bg-gradient-to-r from-pink-500 to-red-500 hover:opacity-95 text-white font-bold py-3.5 rounded-2xl text-sm shadow-md flex items-center justify-center gap-2 transition">
+            <i class="fa-solid fa-microphone-lines"></i> 🎤 Perfect Sync Voiceover ပြုလုပ်မည်
         </button>
 
-        <div id="status-box" class="mt-5 hidden bg-[#151a23] border border-red-500/40 rounded-2xl p-4 text-center">
-            <p id="status-text" class="text-xs text-red-400 mb-2 font-semibold">လုပ်ဆောင်နေပါသည်...</p>
-            <div id="video-container"></div>
+        <div id="status-card" class="mt-4 hidden bg-white rounded-2xl p-4 shadow-sm border border-purple-100 text-center">
+            <p id="status-text" class="text-xs font-semibold text-purple-600 mb-2">လုပ်ဆောင်နေပါသည်...</p>
+            <div id="result-box"></div>
         </div>
 
         <script>
-            let uploadedFileObj = null;
+            let selectedFile = null;
 
-            function handleVideoUpload() {
+            function handleFileSelect() {
                 const input = document.getElementById('video-file');
                 if (input.files && input.files[0]) {
-                    uploadedFileObj = input.files[0];
-                    document.getElementById('upload-label').innerText = "✅ " + uploadedFileObj.name;
+                    selectedFile = input.files[0];
+                    document.getElementById('file-label').innerText = "✅ " + selectedFile.name;
                 }
             }
 
-            async function generateAIScript() {
-                if (!uploadedFileObj) return alert("ကျေးဇူးပြု၍ ဗီဒီယိုဖိုင် အရင်ရွေးချယ်ပေးပါ");
-                const btn = document.getElementById('btn-generate-script');
-                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> AI က ဗီဒီယိုကို နားထောင်ပြီး ဇာတ်ညွှန်းရေးနေပါသည်...';
-                btn.disabled = true;
+            async function startProcess() {
+                if (!selectedFile) return alert("ကျေးဇူးပြု၍ ဗီဒီယိုဖိုင် အရင်ရွေးချယ်ပါ");
 
-                const formData = new FormData();
-                formData.append("file", uploadedFileObj);
-
-                try {
-                    const res = await fetch('/api/auto-transcribe-script', {
-                        method: 'POST',
-                        body: formData
-                    });
-                    const data = await res.json();
-                    if (data.success) {
-                        document.getElementById('recap-script').value = data.script;
-                    } else {
-                        alert("Error: " + data.error);
-                    }
-                } catch(e) {
-                    alert("ချိတ်ဆက်မှု မအောင်မြင်ပါ");
-                } finally {
-                    btn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> 🪄 ဗီဒီယိုထဲမှ AI ဇာတ်ညွှန်း အလိုအလျောက် ထုတ်ယူမည်';
-                    btn.disabled = false;
-                }
-            }
-
-            async function renderRecapVideo() {
-                if (!uploadedFileObj) return alert("ကျေးဇူးပြု၍ ဗီဒီယိုဖိုင် ရွေးချယ်ပေးပါ");
-                const script = document.getElementById('recap-script').value;
-                if (!script) return alert("Recap Script ထည့်သွင်းပေးပါ");
-
-                const voice = document.getElementById('voice-type').value;
-                const flip = document.getElementById('flip-video').checked;
-                const blur = document.getElementById('blur-sub').checked;
-
-                const statusBox = document.getElementById('status-box');
+                const btn = document.getElementById('btn-submit');
+                const statusCard = document.getElementById('status-card');
                 const statusText = document.getElementById('status-text');
-                const videoContainer = document.getElementById('video-container');
+                const resultBox = document.getElementById('result-box');
 
-                statusBox.classList.remove('hidden');
-                videoContainer.innerHTML = '';
-                statusText.innerText = "⏳ AI အသံသွင်းပြီး ဗီဒီယိုနှင့် ပေါင်းစပ်နေပါသည်...";
+                btn.disabled = true;
+                btn.classList.add('opacity-50');
+                statusCard.classList.remove('hidden');
+                resultBox.innerHTML = '';
+                statusText.innerText = "⏳ AI က ဗီဒီယိုကို နားထောင်ပြီး Myanmar Voiceover စတင် ပေါင်းစပ်နေပါသည်...";
 
                 const formData = new FormData();
-                formData.append("file", uploadedFileObj);
-                formData.append("script", script);
-                formData.append("voice", voice);
-                formData.append("flip", flip);
-                formData.append("blur", blur);
+                formData.append("file", selectedFile);
+                formData.append("voice", document.getElementById('voice-type').value);
+                formData.append("speed", document.getElementById('speed-range').value);
+                formData.append("blur_height", document.getElementById('blur-height').value);
 
                 try {
-                    const res = await fetch('/api/render-video', {
+                    const res = await fetch('/api/perfect-sync-voiceover', {
                         method: 'POST',
                         body: formData
                     });
                     const data = await res.json();
                     if (data.success) {
-                        statusText.innerText = "✅ Recap Video ပြီးစီးပါပြီ!";
-                        videoContainer.innerHTML = `
-                            <video controls class="w-full rounded-xl border border-gray-700 mt-2" autoplay>
+                        statusText.innerText = "✅ Perfect Sync Voiceover ပြီးစီးပါပြီ!";
+                        resultBox.innerHTML = `
+                            <video controls class="w-full rounded-xl border mt-2 shadow-inner" autoplay>
                                 <source src="/get-file/${data.output_video}" type="video/mp4">
                             </video>
-                            <a href="/get-file/${data.output_video}" download class="inline-block mt-3 bg-red-600 hover:bg-red-500 text-xs px-4 py-2 rounded-xl text-white font-semibold">
-                                <i class="fa-solid fa-download"></i> Recap Video ဒေါင်းလုဒ်ဆွဲရန်
+                            <a href="/get-file/${data.output_video}" download class="inline-flex items-center gap-1 mt-3 bg-purple-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow hover:bg-purple-700 transition">
+                                <i class="fa-solid fa-download"></i> ထွက်လာသည့် ရလဒ် ဗီဒီယို (AI Voice Only) ဒေါင်းမည်
                             </a>
                         `;
                     } else {
                         statusText.innerText = "❌ အမှားဖြစ်သွားပါသည်: " + data.error;
                     }
-                } catch(err) {
-                    statusText.innerText = "❌ ချိတ်ဆက်မှု မအောင်မြင်ပါ";
+                } catch(e) {
+                    statusText.innerText = "❌ စနစ် ချိတ်ဆက်မှု မအောင်မြင်ပါ";
+                } finally {
+                    btn.disabled = false;
+                    btn.classList.remove('opacity-50');
                 }
             }
         </script>
@@ -178,76 +148,54 @@ def get_file(filename: str):
         return FileResponse(filename)
     raise HTTPException(status_code=404, detail="File not found")
 
-@app.post("/api/auto-transcribe-script")
-async def auto_transcribe_script(file: UploadFile = File(...)):
-    try:
-        session_id = uuid.uuid4().hex[:8]
-        temp_video = f"temp_in_{session_id}.mp4"
-        with open(temp_video, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
-
-        # Upload to Gemini File API for Video Understanding
-        if client:
-            gemini_file = client.files.upload(file=temp_video)
-            prompt = """
-            ဤဗီဒီယိုဖိုင်ထဲတွင် ပါဝင်သော စကားပြောသံများ၊ ဇာတ်ကောင်များ၏ လှုပ်ရှားမှုနှင့် အခြေအနေများကို နားထောင်/ကြည့်ရှုပြီး Facebook/TikTok တွင် လူကြိုက်များသော Drama Movie Recap စတိုင် မြန်မာစကားပြော ဇာတ်ညွှန်းအဖြစ် တိုက်ရိုက် ရေးသားပေးပါ။
-            
-            ဥပမာ စတိုင် - 'သေလိုက်တော့... ငါ့အနား မလာနဲ့... ဒါက ဘယ်သူလဲ အတော်လေး ချောတာပဲ... မကြောက်နဲ့ ငါ မင်းကို အန္တရာယ် မပြုပါဘူး... အခု မင်းက ငါ့လူ ဖြစ်သွားပြီ...'
-            
-            လိုအပ်ချက်:
-            - အပို နိဒါန်း၊ ခေါင်းစဉ်များ လုံးဝ မပါရ။
-            - Voiceover အဖြစ် တန်းဖတ်ရုံ မြန်မာစာသားများ သာ သဘာဝကျကျ ထုတ်ပေးပါ။
-            """
-            response = client.models.generate_content(
-                model="gemini-2.0-flash",
-                contents=[gemini_file, prompt]
-            )
-            script = response.text.strip()
-        else:
-            script = "သေလိုက်တော့... ငါ့အနားမလာနဲ့။ ဒါက ဘယ်သူလဲ... အတော်လေး ချောလွန်းတယ်။ မကြောက်နဲ့ ငါ မင်းကို အန္တရာယ် မပြုပါဘူး။"
-
-        if os.path.exists(temp_video):
-            os.remove(temp_video)
-
-        return {"success": True, "script": script}
-    except Exception as e:
-        return {"success": False, "error": str(e)}
-
-@app.post("/api/render-video")
-async def render_video(
+@app.post("/api/perfect-sync-voiceover")
+async def perfect_sync_voiceover(
     file: UploadFile = File(...),
-    script: str = Form(...),
-    voice: str = Form("my-MM-ThihaNeural"),
-    flip: bool = Form(False),
-    blur: bool = Form(True)
+    voice: str = Form("my-MM-NilarNeural"),
+    speed: float = Form(1.0),
+    blur_height: int = Form(75)
 ):
     try:
         session_id = uuid.uuid4().hex[:8]
         input_vid = f"in_{session_id}.mp4"
         audio_path = f"audio_{session_id}.mp3"
-        output_vid = f"recap_final_{session_id}.mp4"
+        output_vid = f"tiktok_recap_{session_id}.mp4"
 
         with open(input_vid, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
 
-        # 1. TTS Audio Generation
+        # 1. AI Script Generation
+        script = ""
+        if client:
+            try:
+                gemini_file = client.files.upload(file=input_vid)
+                prompt = "ဤဗီဒီယိုထဲတွင် ပါဝင်သော စကားပြောများနှင့် အခြေအနေကို နားထောင်ပြီး TikTok Short Drama Recap ပုံစံဖြင့် မြန်မာစကားပြော ဇာတ်ညွှန်းအဖြစ် ရေးပေးပါ။ နိဒါန်း ခေါင်းစဉ်များ မပါဘဲ Voiceover ဖတ်ရန် သက်သက်သာ ရေးပေးပါ။"
+                response = client.models.generate_content(
+                    model="gemini-2.5-flash",
+                    contents=[gemini_file, prompt]
+                )
+                script = response.text.strip()
+            except Exception:
+                script = "ဒီဇာတ်ကားထဲမှာတော့ မမျှော်လင့်ဘဲ စိတ်လှုပ်ရှားဖွယ် အဖြစ်အပျက်တွေနဲ့ ကြုံတွေ့ခဲ့ရပါတယ်။"
+
+        if not script:
+            script = "ဒီဇာတ်ကားထဲမှာတော့ မမျှော်လင့်ဘဲ စိတ်လှုပ်ရှားဖွယ် အဖြစ်အပျက်တွေနဲ့ ကြုံတွေ့ခဲ့ရပါတယ်။"
+
+        # 2. TTS Voiceover
         communicate = edge_tts.Communicate(script, voice)
         await communicate.save(audio_path)
 
-        # 2. FFmpeg Filters (Blur & Flip)
-        filters = []
-        if flip:
-            filters.append("hflip")
-        if blur:
-            filters.append("split[v1][v2];[v2]crop=iw:ih*0.22:0:ih*0.78,boxblur=15[blurred];[v1][blurred]overlay=0:H*0.78")
+        # 3. FFmpeg Processing
+        h_ratio = round(blur_height / 100.0, 2)
+        crop_h = round(1.0 - h_ratio, 2)
 
-        vf_str = ",".join(filters) if filters else "null"
+        filter_complex = f"split[v1][v2];[v2]crop=iw:ih*{crop_h}:0:ih*{h_ratio},boxblur=15[blurred];[v1][blurred]overlay=0:H*{h_ratio}"
 
         cmd = [
             "ffmpeg", "-y",
             "-i", input_vid,
             "-i", audio_path,
-            "-vf", vf_str,
+            "-filter_complex", filter_complex,
             "-map", "0:v:0",
             "-map", "1:a:0",
             "-c:v", "libx264",
