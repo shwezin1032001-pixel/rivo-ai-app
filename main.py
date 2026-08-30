@@ -51,7 +51,7 @@ async def get_ui():
                     <i class="fa-solid fa-wand-magic-sparkles"></i> AI ဖြင့် စာသားထုတ်မည်
                 </button>
             </div>
-            <textarea id="script-input" rows="4" class="w-full bg-[#1a1d24] border border-slate-700 rounded-xl p-3 text-xs text-slate-200 focus:outline-none focus:border-amber-500 leading-relaxed" placeholder="ဗီဒီယိုရွေးပြီး 'AI ဖြင့် စာသားထုတ်မည်' ကို နှိပ်ပါ သို့မဟုတ် ကိုယ်တိုင် စာသား ရိုက်ထည့်နိုင်ပါသည်..."></textarea>
+            <textarea id="script-input" rows="5" class="w-full bg-[#1a1d24] border border-slate-700 rounded-xl p-3 text-xs text-slate-200 focus:outline-none focus:border-amber-500 leading-relaxed" placeholder="ဗီဒီယိုရွေးပြီး 'AI ဖြင့် စာသားထုတ်မည်' ကို နှိပ်ပါ သို့မဟုတ် ဤနေရာတွင် စာသား တိုက်ရိုက် ပြင်ဆင်နိုင်ပါသည်..."></textarea>
         </div>
 
         <!-- Voice Selection -->
@@ -94,7 +94,7 @@ async def get_ui():
             async function generateAiScript() {
                 if (!selectedFile) return alert("ကျေးဇူးပြု၍ Video ဖိုင် အရင်ရွေးချယ်ပါ");
                 const scriptInput = document.getElementById('script-input');
-                scriptInput.value = "⏳ AI က ဗီဒီယိုကို နားထောင်ပြီး ဇာတ်လမ်းစာသား ရေးဖွဲ့နေပါသည်... စက္ကန့် ၃၀ ခန့် စောင့်ပေးပါ...";
+                scriptInput.value = "⏳ AI က ဗီဒီယိုကို နားထောင်ပြီး ဇာတ်လမ်းစာသား ရေးဖွဲ့နေပါသည်... ခေတ္တစောင့်ပေးပါ...";
 
                 const formData = new FormData();
                 formData.append("file", selectedFile);
@@ -232,11 +232,11 @@ async def generate_script(file: UploadFile = File(...)):
                 TikTok Movie Recap / Story Narration ပုံစံဖြင့် မြန်မာလို အစမှ အဆုံးအထိ စကားပြောဟန်ဖြင့် ဇာတ်ကြောင်း ပြန်ပြောပြသည့် စာသား အပြည့်အစုံ ရေးပေးပါ။
                 
                 စည်းကမ်းချက်များ -
-                - ဗီဒီယိုအရှည်နှင့် အံဝင်ခွင်ကျဖြစ်အောင် စာသားကို ရှည်ရှည်ပြည့်ပြည့်စုံစုံ ရေးပေးပါ။
+                - ဗီဒီယိုအရှည်နှင့် အံဝင်ခွင်ကျဖြစ်အောင် စာသားကို အစမှ အဆုံးအထိ ဆက်တိုက် ရေးပေးပါ။
                 - အစ၊ အလယ်၊ အဆုံး ခေါင်းစဉ်များ၊ နိဒါန်း၊ နိဂုံး ရှင်းလင်းချက် လုံးဝ မပါရ။ ဖတ်ပြမည့် စာသား သက်သက်သာ ရေးပေးပါ။
                 """
                 response = client.models.generate_content(
-                    model="gemini-2.0-flash",
+                    model="gemini-2.5-flash",
                     contents=[audio_file, prompt]
                 )
                 script = response.text.strip()
