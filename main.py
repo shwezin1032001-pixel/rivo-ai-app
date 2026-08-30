@@ -28,60 +28,42 @@ async def get_ui():
     </head>
     <body class="bg-[#12141a] text-slate-100 font-sans p-4 max-w-md mx-auto min-h-screen pb-20 text-xs">
 
-        <!-- Header -->
         <div class="text-center my-3">
             <span class="text-[10px] text-amber-400 font-semibold uppercase tracking-wider">VIDEO မှ မြန်မာဘာသာသို့ တစ်ချက်နှိပ်ရုံဖြင့်</span>
             <h1 class="text-xl font-extrabold text-white mt-0.5">One Click Recap</h1>
             <p class="text-[11px] text-slate-400 mt-1 leading-relaxed">
-                မည်သည့်ဘာသာစကားဖြင့်မဆို ပြောထားသော Video ကို တင်ပါ။ AI က မြန်မာဘာသာ Video အဖြစ် ပြောင်းလဲပေးပြီး Subtitle အလိုအလျောက် ထည့်သွင်းပေးပါမည်။
+                ဇာတ်ကောင်ပြောစကားများကို မြန်မာလို တိုက်ရိုက်ပြန်ဆိုပြီး Subtitle အလိုအလျောက် ထည့်သွင်းပေးပါမည်။
             </p>
         </div>
 
-        <!-- Video Upload Box -->
         <div class="border border-dashed border-amber-500/50 bg-[#1a1d24] hover:bg-[#222630] rounded-2xl p-6 text-center cursor-pointer relative transition mb-4 shadow-lg">
             <input type="file" id="video-file" accept="video/*" class="absolute inset-0 opacity-0 cursor-pointer w-full h-full" onchange="handleFileSelect()">
             <div class="w-12 h-12 bg-amber-500/10 text-amber-400 rounded-full flex items-center justify-center mx-auto mb-2 text-xl">
                 <i class="fa-solid fa-cloud-arrow-up"></i>
             </div>
             <p id="file-label" class="font-bold text-slate-200">Video ရွေးပါ</p>
-            <p class="text-[10px] text-slate-500 mt-1">MP4, MOV သို့မဟုတ် WEBM (အများဆုံး 100 MB)</p>
+            <p class="text-[10px] text-slate-500 mt-1">MP4, MOV သို့မဟုတ် WEBM</p>
         </div>
 
-        <!-- Subtitle Style -->
-        <div class="mb-4">
-            <label class="font-bold text-slate-300 block mb-2">Subtitle ပုံစံ</label>
-            <div class="space-y-2">
-                <label class="flex items-center justify-between p-3 rounded-xl border border-amber-500 bg-amber-500/10 cursor-pointer">
-                    <div>
-                        <p class="font-bold text-amber-400">အသင့်သုံး Subtitle</p>
-                        <p class="text-[10px] text-slate-400">Blur Video ပေါ်တွင် အဆင်သင့် မြန်မာစာတန်း တိုက်ရိုက်ထည့်သွင်းမည်</p>
-                    </div>
-                    <input type="radio" name="sub_mode" value="auto" checked class="accent-amber-500">
-                </label>
-            </div>
-        </div>
-
-        <!-- AI Voice Selection -->
         <div class="mb-4">
             <label class="font-bold text-slate-300 block mb-2">မြန်မာ AI အသံ</label>
             <select id="voice-type" class="w-full bg-[#1a1d24] border border-slate-700 rounded-xl p-3 text-xs font-semibold text-white focus:outline-none focus:border-amber-500">
-                <option value="my-MM-ThihaNeural">Charon / Thiha (အမျိုးသား ဇာတ်လမ်းပြောသံ)</option>
-                <option value="my-MM-NilarNeural">Kore / Nilar (အမျိုးသမီး ဇာတ်လမ်းပြောသံ)</option>
+                <option value="my-MM-ThihaNeural">Charon / Thiha (အမျိုးသားသံ)</option>
+                <option value="my-MM-NilarNeural">Kore / Nilar (အမျိုးသမီးသံ)</option>
             </select>
         </div>
 
-        <!-- Submit Button -->
         <button id="btn-submit" onclick="startOneClickRecap()" class="w-full bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-black font-extrabold py-3.5 rounded-2xl text-sm shadow-xl flex items-center justify-center gap-2 transition">
             <i class="fa-solid fa-wand-magic-sparkles"></i> One Click Recap ဖန်တီးရန်
         </button>
 
-        <!-- Output Result Box -->
         <div id="status-card" class="mt-5 hidden bg-[#1a1d24] border border-slate-800 rounded-2xl p-4 shadow-xl">
             <div class="flex justify-between items-center mb-2">
-                <span class="font-bold text-slate-200">RECAP အဆင်သင့်ဖြစ်ပါပြီ</span>
+                <span class="font-bold text-slate-200">လုပ်ဆောင်ချက် အခြေအနေ</span>
                 <span id="job-badge" class="bg-amber-500/20 text-amber-400 text-[10px] px-2 py-0.5 rounded-full font-semibold">လုပ်ဆောင်နေသည်</span>
             </div>
-            <p id="status-text" class="text-[11px] text-slate-400 mb-3">AI က Video ကို နားထောင်ပြီး Subtitle နှင့် Voiceover ဖန်တီးနေပါသည်...</p>
+            <p id="status-text" class="text-[11px] text-slate-400 mb-3">ဗီဒီယိုထဲမှ စကားပြောများကို နားထောင်ပြီး ဘာသာပြန်နေပါသည်...</p>
+            <div id="script-preview" class="text-[11px] text-left bg-black/40 p-3 rounded-xl max-h-36 overflow-y-auto mb-3 hidden border border-slate-800 leading-relaxed text-gray-300"></div>
             <div id="video-result"></div>
         </div>
 
@@ -105,14 +87,16 @@ async def get_ui():
                 const statusCard = document.getElementById('status-card');
                 const statusText = document.getElementById('status-text');
                 const jobBadge = document.getElementById('job-badge');
+                const scriptPreview = document.getElementById('script-preview');
                 const videoResult = document.getElementById('video-result');
 
                 btn.disabled = true;
                 btn.classList.add('opacity-50');
                 statusCard.classList.remove('hidden');
+                scriptPreview.classList.add('hidden');
                 videoResult.innerHTML = '';
                 jobBadge.innerText = "လုပ်ဆောင်နေသည်";
-                statusText.innerText = "Video ကို လှမ်းယူပြီး AI စနစ်ဖြင့် ဇာတ်ညွှန်းနှင့် အသံသွင်းယူနေပါသည်...";
+                statusText.innerText = "AI စနစ်ဖြင့် ဇာတ်ကောင် စကားပြောများကို အစအဆုံး မြန်မာလို ပြန်ဆိုနေပါသည်...";
 
                 const formData = new FormData();
                 formData.append("file", selectedFile);
@@ -147,6 +131,11 @@ async def get_ui():
                         const res = await fetch('/api/task-status/' + currentTaskId);
                         const data = await res.json();
                         document.getElementById('status-text').innerText = data.detail;
+
+                        if (data.script && document.getElementById('script-preview').classList.contains('hidden')) {
+                            document.getElementById('script-preview').classList.remove('hidden');
+                            document.getElementById('script-preview').innerHTML = "<b>🎬 ထွက်ရှိလာသော စကားပြော ဇာတ်ညွှန်း:</b><br>" + data.script.replace(/\\n/g, '<br>');
+                        }
 
                         if (data.status === 'completed') {
                             clearInterval(pollTimer);
@@ -198,35 +187,49 @@ async def process_one_click_pipeline(task_id: str, input_vid: str, voice: str):
 
         subprocess.run(["ffmpeg", "-y", "-i", input_vid, "-vn", "-ar", "16000", "-ac", "1", extracted_audio], check=True)
 
-        tasks_db[task_id]["detail"] = "Gemini AI ဖြင့် မြန်မာ Recap ဇာတ်ညွှန်း ရေးဖွဲ့နေပါသည်..."
+        tasks_db[task_id]["detail"] = "Gemini AI ဖြင့် ဗီဒီယိုထဲက စကားပြောအားလုံးကို မြန်မာလို အပြည့်အစုံ ပြန်ဆိုနေပါသည်..."
 
         script = ""
         if client and os.path.exists(extracted_audio):
             try:
                 gemini_file = client.files.upload(file=extracted_audio)
                 prompt = """
-                ဤအသံဖိုင်ထဲတွင် ပါဝင်သော အဖြစ်အပျက်များကို အစမှ အဆုံးအထိ နားထောင်ပြီး TikTok/Facebook Movie Recap စတိုင် မြန်မာစကားပြော ဇာတ်ညွှန်း အပြည့်အစုံ ရေးပေးပါ။
-                ဇာတ်လမ်းကို အတိုချုံ့ခြင်း လုံးဝ မလုပ်ပါနှင့်။ အသံဖတ်ရန် သက်သက်သာ ရေးပေးပါ။
+                ဤအသံဖိုင်ထဲတွင် ဇာတ်ကောင်များ အစမှ အဆုံးအထိ ပြောဆိုနေသော စကားများကို အတိအကျ နားထောင်ပါ။ 
+                ဇာတ်လမ်းကို အပြင်ကနေ ရှင်းပြခြင်း (Narrator Style/Storyteller) လုံးဝ မလုပ်ပါနှင့်။ အတိုချုံ့ခြင်း မလုပ်ပါနှင့်။
+                
+                ဇာတ်ကောင်တွေ အချင်းချင်း ပြောဆိုနေသည့် စကားများကို အချိန်နှင့်အမျှ မြန်မာလို တိုက်ရိုက် စကားပြန် (Dialogue Dubbing) အဖြစ်သာ အပြည့်အစုံ ပြန်ဆိုပေးပါ။
+                
+                ဥပမာ -
+                "ဒီမှာ ဘာဖြစ်နေတာလဲ"
+                "မင်း အခု ချက်ချင်း ရပ်လိုက်တော့"
+                "သမီးလေး နေကောင်းရဲ့လား"
+                "ငါ မင်းကို လုံးဝ ခွင့်မလွှတ်နိုင်ဘူး"
+                
+                လိုအပ်ချက် -
+                - နိဒါန်း၊ နိဂုံး၊ ရှင်းလင်းချက် ခေါင်းစဉ်များ လုံးဝ မပါရ။
+                - ဇာတ်ကောင်ပြောစကား စစ်စစ်များသာ အစမှ အဆုံးအထိ ဆက်တိုက် ရေးပေးပါ။
                 """
                 response = client.models.generate_content(
                     model="gemini-2.0-flash",
                     contents=[gemini_file, prompt]
                 )
                 script = response.text.strip()
-            except Exception:
+            except Exception as ex:
                 script = ""
 
         if not script:
-            script = "ဒီနေရာမှာတော့ ကောင်လေးဟာ ထူးဆန်းတဲ့ အဖြစ်အပျက်တွေနဲ့ စတင် ကြုံတွေ့ခဲ့ရပါတယ်။"
+            script = "ဒီမှာ ဘာဖြစ်နေတာလဲ။ မင်း အခု ချက်ချင်း ရပ်လိုက်တော့။ ငါ မင်းကို လုံးဝ ခွင့်မလွှတ်နိုင်ဘူး။"
 
+        tasks_db[task_id]["script"] = script
         tasks_db[task_id]["detail"] = "AI Myanmar Voiceover ထုတ်လုပ်နေပါသည်..."
+        
         communicate = edge_tts.Communicate(script, voice)
         await communicate.save(ai_audio)
 
-        tasks_db[task_id]["detail"] = "Blur အုပ်ပြီး Video & Subtitle ပေါင်းစပ်နေပါသည်..."
+        tasks_db[task_id]["detail"] = "Blur အုပ်ပြီး ဗီဒီယိုနှင့် အသံကို ပေါင်းစပ်နေပါသည်..."
 
-        # Blur bottom 25% subtitle area
-        filter_complex = "split[v1][v2];[v2]crop=iw:ih*0.25:0:ih*0.75,boxblur=15[blurred];[v1][blurred]overlay=0:H*0.75"
+        # Subtitle blur filter (bottom 22%)
+        filter_complex = "split[v1][v2];[v2]crop=iw:ih*0.22:0:ih*0.78,boxblur=15[blurred];[v1][blurred]overlay=0:H*0.78"
 
         cmd = [
             "ffmpeg", "-y",
@@ -269,7 +272,8 @@ async def one_click_recap(
     tasks_db[task_id] = {
         "status": "processing",
         "detail": "စတင် လုပ်ဆောင်နေပါသည်...",
-        "output_video": ""
+        "output_video": "",
+        "script": ""
     }
 
     background_tasks.add_task(
