@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException, Form, UploadFile, File, BackgroundTasks
 from fastapi.responses import HTMLResponse, FileResponse
-import google.generativeai as genai
+from google import genai
 import edge_tts
 import uuid
 import os
@@ -10,8 +10,7 @@ import subprocess
 app = FastAPI(title="AI Story Narration Studio")
 
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
-if GEMINI_API_KEY:
-    genai.configure(api_key=GEMINI_API_KEY)
+client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
 
 tasks_db = {}
 
@@ -47,12 +46,12 @@ async def get_ui():
         <!-- Script Area (Editable) -->
         <div class="mb-4">
             <div class="flex justify-between items-center mb-1.5">
-                <label class="font-bold text-slate-300">🎬 ဇာတ်ကြောင်းပြော စာသား (AI ရေးပေးမည် သို့မဟုတ် ကိုယ်တိုင်ပြင်နိုင်သည်)</label>
+                <label class="font-bold text-slate-300">🎬 ဇာတ်ကြောင်းပြော စာသား</label>
                 <button type="button" onclick="generateAiScript()" class="text-amber-400 hover:text-amber-300 text-[10px] font-bold">
                     <i class="fa-solid fa-wand-magic-sparkles"></i> AI ဖြင့် စာသားထုတ်မည်
                 </button>
             </div>
-            <textarea id="script-input" rows="4" class="w-full bg-[#1a1d24] border border-slate-700 rounded-xl p-3 text-xs text-slate-200 focus:outline-none focus:border-amber-500 leading-relaxed" placeholder="ဗီဒီယိုရွေးပြီး 'AI ဖြင့် စာသားထုတ်မည်' ကို နှိပ်ပါ သို့မဟုတ် ဤနေရာတွင် စာသား တိုက်ရိုက် ရိုက်ထည့်နိုင်ပါသည်..."></textarea>
+            <textarea id="script-input" rows="4" class="w-full bg-[#1a1d24] border border-slate-700 rounded-xl p-3 text-xs text-slate-200 focus:outline-none focus:border-amber-500 leading-relaxed" placeholder="ဗီဒီယိုရွေးပြီး 'AI ဖြင့် စာသားထုတ်မည်' ကို နှိပ်ပါ သို့မဟုတ် ကိုယ်တိုင် စာသား ရိုက်ထည့်နိုင်ပါသည်..."></textarea>
         </div>
 
         <!-- Voice Selection -->
@@ -121,7 +120,7 @@ async def get_ui():
             async function startRenderVideo() {
                 if (!selectedFile) return alert("ကျေးဇူးပြု၍ Video ဖိုင် အရင်ရွေးချယ်ပါ");
                 const scriptText = document.getElementById('script-input').value.trim();
-                if (!scriptText) return alert("ကျေးဇူးပြု၍ ဇာတ်လမ်းစာသား ထည့်သွင်းပေးပါ (သို့မဟုတ် AI ဖြင့် စာသားထုတ်ပါ)");
+                if (!scriptText) return alert("ကျေးဇူးပြု၍ ဇာတ်လမ်းစာသား ထည့်သွင်းပေးပါ");
 
                 const btn = document.getElementById('btn-submit');
                 const statusCard = document.getElementById('status-card');
@@ -225,21 +224,26 @@ async def generate_script(file: UploadFile = File(...)):
         subprocess.run(["ffmpeg", "-y", "-i", input_vid, "-vn", "-ar", "16000", "-ac", "1", extracted_audio], check=True)
 
         script = ""
-        try:
-            model = genai.GenerativeModel("gemini-1.5-flash")
-            audio_upload = genai.upload_file(path=extracted_audio)
-            prompt = """
-            ဤအသံဖိုင်ထဲတွင် ပါဝင်သော အဖြစ်အပျက်နှင့် စကားပြောများကို အစမှ အဆုံးအထိ သေချာနားထောင်ပါ။
-            TikTok Movie Recap / Story Narration ပုံစံဖြင့် မြန်မာလို အစမှ အဆုံးအထိ စကားပြောဟန်ဖြင့် ဇာတ်ကြောင်း ပြန်ပြောပြသည့် စာသား အပြည့်အစုံ ရေးပေးပါ။
-            
-            စည်းကမ်းချက်များ -
-            - ဗီဒီယိုအရှည်နှင့် အံဝင်ခွင်ကျဖြစ်အောင် စာသားကို ရှည်ရှည်ပြည့်ပြည့်စုံစုံ ရေးပေးပါ။
-            - အစ၊ အလယ်၊ အဆုံး ခေါင်းစဉ်များ၊ နိဒါန်း၊ နိဂုံး ရှင်းလင်းချက် လုံးဝ မပါရ။ ဖတ်ပြမည့် စာသား သက်သက်သာ ရေးပေးပါ။
-            """
-            response = model.generate_content([audio_upload, prompt])
-            script = response.text.strip()
-        except Exception as ex:
-            script = f"Error: {str(ex)}"
+        if client:
+            try:
+                audio_file = client.files.upload(file=extracted_audio)
+                prompt = """
+                ဤအသံဖိုင်ထဲတွင် ပါဝင်သော အဖြစ်အပျက်နှင့် စကားပြောများကို အစမှ အဆုံးအထိ သေချာနားထောင်ပါ။
+                TikTok Movie Recap / Story Narration ပုံစံဖြင့် မြန်မာလို အစမှ အဆုံးအထိ စကားပြောဟန်ဖြင့် ဇာတ်ကြောင်း ပြန်ပြောပြသည့် စာသား အပြည့်အစုံ ရေးပေးပါ။
+                
+                စည်းကမ်းချက်များ -
+                - ဗီဒီယိုအရှည်နှင့် အံဝင်ခွင်ကျဖြစ်အောင် စာသားကို ရှည်ရှည်ပြည့်ပြည့်စုံစုံ ရေးပေးပါ။
+                - အစ၊ အလယ်၊ အဆုံး ခေါင်းစဉ်များ၊ နိဒါန်း၊ နိဂုံး ရှင်းလင်းချက် လုံးဝ မပါရ။ ဖတ်ပြမည့် စာသား သက်သက်သာ ရေးပေးပါ။
+                """
+                response = client.models.generate_content(
+                    model="gemini-2.0-flash",
+                    contents=[audio_file, prompt]
+                )
+                script = response.text.strip()
+            except Exception as ex:
+                script = f"Error: {str(ex)}"
+        else:
+            script = "GEMINI_API_KEY မရှိသေးပါ။ Render Environment တွင် ထည့်သွင်းပေးပါ။"
 
         if os.path.exists(input_vid): os.remove(input_vid)
         if os.path.exists(extracted_audio): os.remove(extracted_audio)

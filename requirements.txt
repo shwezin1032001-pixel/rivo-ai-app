@@ -1,7 +1,5 @@
 fastapi
 uvicorn
-google-genai
-youtube-transcript-api
-yt-dlp
-edge-tts
 python-multipart
+google-genai
+edge-tts
