@@ -7,7 +7,7 @@ import os
 import shutil
 import subprocess
 
-app = FastAPI(title="One Click Recap AI Studio")
+app = FastAPI(title="AI Story Narration Studio")
 
 api_key = os.environ.get("GEMINI_API_KEY", "")
 client = genai.Client(api_key=api_key) if api_key else None
@@ -22,17 +22,17 @@ async def get_ui():
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>One Click Recap AI</title>
+        <title>AI Story Narration Studio</title>
         <script src="https://cdn.tailwindcss.com"></script>
         <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     </head>
     <body class="bg-[#12141a] text-slate-100 font-sans p-4 max-w-md mx-auto min-h-screen pb-20 text-xs">
 
         <div class="text-center my-3">
-            <span class="text-[10px] text-amber-400 font-semibold uppercase tracking-wider">VIDEO မှ မြန်မာဘာသာသို့ တစ်ချက်နှိပ်ရုံဖြင့်</span>
-            <h1 class="text-xl font-extrabold text-white mt-0.5">One Click Recap</h1>
+            <span class="text-[10px] text-amber-400 font-semibold uppercase tracking-wider">AI Video to Burmese Story</span>
+            <h1 class="text-xl font-extrabold text-white mt-0.5">AI ဇာတ်ကြောင်းပြော & စာတန်းထိုး Studio</h1>
             <p class="text-[11px] text-slate-400 mt-1 leading-relaxed">
-                ဇာတ်ကောင်ပြောစကားများကို မြန်မာလို တိုက်ရိုက်ပြန်ဆိုပြီး Subtitle အလိုအလျောက် ထည့်သွင်းပေးပါမည်။
+                Video တင်လိုက်သည်နှင့် AI က ဇာတ်လမ်းတစ်ပုဒ်လုံးကို အစအဆုံး မြန်မာအသံဖြင့် ဖတ်ပြပြီး စာတန်းထိုးပါ ထည့်ပေးပါမည်။
             </p>
         </div>
 
@@ -46,15 +46,15 @@ async def get_ui():
         </div>
 
         <div class="mb-4">
-            <label class="font-bold text-slate-300 block mb-2">မြန်မာ AI အသံ</label>
+            <label class="font-bold text-slate-300 block mb-2">မြန်မာ AI အသံ ရွေးချယ်ရန်</label>
             <select id="voice-type" class="w-full bg-[#1a1d24] border border-slate-700 rounded-xl p-3 text-xs font-semibold text-white focus:outline-none focus:border-amber-500">
-                <option value="my-MM-ThihaNeural">Charon / Thiha (အမျိုးသားသံ)</option>
-                <option value="my-MM-NilarNeural">Kore / Nilar (အမျိုးသမီးသံ)</option>
+                <option value="my-MM-ThihaNeural">Thiha (အမျိုးသား ဇာတ်လမ်းပြောသံ)</option>
+                <option value="my-MM-NilarNeural">Nilar (အမျိုးသမီး ဇာတ်လမ်းပြောသံ)</option>
             </select>
         </div>
 
-        <button id="btn-submit" onclick="startOneClickRecap()" class="w-full bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-black font-extrabold py-3.5 rounded-2xl text-sm shadow-xl flex items-center justify-center gap-2 transition">
-            <i class="fa-solid fa-wand-magic-sparkles"></i> One Click Recap ဖန်တီးရန်
+        <button id="btn-submit" onclick="startStoryProcess()" class="w-full bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-black font-extrabold py-3.5 rounded-2xl text-sm shadow-xl flex items-center justify-center gap-2 transition">
+            <i class="fa-solid fa-wand-magic-sparkles"></i> ဇာတ်ကြောင်းပြော & စာတန်းထိုး ပြုလုပ်မည်
         </button>
 
         <div id="status-card" class="mt-5 hidden bg-[#1a1d24] border border-slate-800 rounded-2xl p-4 shadow-xl">
@@ -62,7 +62,7 @@ async def get_ui():
                 <span class="font-bold text-slate-200">လုပ်ဆောင်ချက် အခြေအနေ</span>
                 <span id="job-badge" class="bg-amber-500/20 text-amber-400 text-[10px] px-2 py-0.5 rounded-full font-semibold">လုပ်ဆောင်နေသည်</span>
             </div>
-            <p id="status-text" class="text-[11px] text-slate-400 mb-3">ဗီဒီယိုထဲမှ စကားပြောများကို နားထောင်ပြီး ဘာသာပြန်နေပါသည်...</p>
+            <p id="status-text" class="text-[11px] text-slate-400 mb-3">ဗီဒီယိုကို ကြည့်ရှုပြီး ဇာတ်လမ်း အပြည့်အစုံ ရေးဖွဲ့နေပါသည်...</p>
             <div id="script-preview" class="text-[11px] text-left bg-black/40 p-3 rounded-xl max-h-36 overflow-y-auto mb-3 hidden border border-slate-800 leading-relaxed text-gray-300"></div>
             <div id="video-result"></div>
         </div>
@@ -80,7 +80,7 @@ async def get_ui():
                 }
             }
 
-            async function startOneClickRecap() {
+            async function startStoryProcess() {
                 if (!selectedFile) return alert("ကျေးဇူးပြု၍ Video ဖိုင် အရင်ရွေးချယ်ပါ");
 
                 const btn = document.getElementById('btn-submit');
@@ -96,14 +96,14 @@ async def get_ui():
                 scriptPreview.classList.add('hidden');
                 videoResult.innerHTML = '';
                 jobBadge.innerText = "လုပ်ဆောင်နေသည်";
-                statusText.innerText = "AI စနစ်ဖြင့် ဇာတ်ကောင် စကားပြောများကို အစအဆုံး မြန်မာလို ပြန်ဆိုနေပါသည်...";
+                statusText.innerText = "ဗီဒီယိုကို နားထောင်ပြီး ဇာတ်လမ်းအစအဆုံး ရေးဖွဲ့နေပါသည်...";
 
                 const formData = new FormData();
                 formData.append("file", selectedFile);
                 formData.append("voice", document.getElementById('voice-type').value);
 
                 try {
-                    const res = await fetch('/api/one-click-recap', {
+                    const res = await fetch('/api/create-story-narration', {
                         method: 'POST',
                         body: formData
                     });
@@ -134,7 +134,7 @@ async def get_ui():
 
                         if (data.script && document.getElementById('script-preview').classList.contains('hidden')) {
                             document.getElementById('script-preview').classList.remove('hidden');
-                            document.getElementById('script-preview').innerHTML = "<b>🎬 ထွက်ရှိလာသော စကားပြော ဇာတ်ညွှန်း:</b><br>" + data.script.replace(/\\n/g, '<br>');
+                            document.getElementById('script-preview').innerHTML = "<b>🎬 AI ဇာတ်လမ်း စာသား:</b><br>" + data.script.replace(/\\n/g, '<br>');
                         }
 
                         if (data.status === 'completed') {
@@ -178,47 +178,43 @@ def task_status(task_id: str):
         return tasks_db[task_id]
     return {"status": "not_found", "progress": 0, "detail": "Task not found"}
 
-async def process_one_click_pipeline(task_id: str, input_vid: str, voice: str):
+async def process_story_pipeline(task_id: str, input_vid: str, voice: str):
     try:
         tasks_db[task_id]["detail"] = "အသံပိုင်းကို ခွဲထုတ်နေပါသည်..."
         extracted_audio = f"aud_{task_id}.mp3"
         ai_audio = f"tts_{task_id}.mp3"
-        output_vid = f"recap_final_{task_id}.mp4"
+        output_vid = f"story_final_{task_id}.mp4"
 
         subprocess.run(["ffmpeg", "-y", "-i", input_vid, "-vn", "-ar", "16000", "-ac", "1", extracted_audio], check=True)
 
-        tasks_db[task_id]["detail"] = "Gemini AI ဖြင့် ဗီဒီယိုထဲက စကားပြောအားလုံးကို မြန်မာလို အပြည့်အစုံ ပြန်ဆိုနေပါသည်..."
+        tasks_db[task_id]["detail"] = "Gemini AI ဖြင့် ဇာတ်ကြောင်းပြော စာသား အစအဆုံး ရေးဖွဲ့နေပါသည်..."
+
+        prompt = """
+        ဤအသံဖိုင်ထဲတွင် ပါဝင်သော အဖြစ်အပျက်နှင့် စကားပြောများကို အစမှ အဆုံးအထိ သေချာနားထောင်ပါ။
+        ထို့နောက် TikTok Story/Movie Recap ပုံစံဖြင့် မြန်မာလို အစမှ အဆုံးအထိ စကားပြောဟန်ဖြင့် ဇာတ်ကြောင်း ပြန်ပြောပြသည့် စာသား (Story Narration) အပြည့်အစုံ ရေးပေးပါ။
+        
+        ဥပမာပုံစံ -
+        "ငါ့ကို အပြစ်မတင်ပါနဲ့ မင်းမရှိမှပဲ ငါ သူဌေးအိမ်ကို အိမ်ထောင်ပြုဝင်နိုင်မှာ ကောင်းကောင်းမွန်မွန် နေနိုင်မှာ။ အလိုလို ရောက်လာတဲ့ အသားတုံးပဲ... ငါ မင်းကို ခဏတော့ ကယ်နိုင်ပေမဲ့ တစ်သက်လုံးတော့ မစောင့်ရှောက်နိုင်ဘူး..."
+        
+        စည်းကမ်းချက်များ -
+        - ဗီဒီယိုအရှည်နှင့် အံဝင်ခွင်ကျဖြစ်အောင် စာသားကို ရှည်ရှည်ပြည့်ပြည့်စုံစုံ ရေးပေးပါ။
+        - အစ၊ အလယ်၊ အဆုံး ခေါင်းစဉ်များ၊ နိဒါန်း၊ နိဂုံး ရှင်းလင်းချက် လုံးဝ မပါရ။ ဖတ်ပြမည့် စာသား သက်သက်သာ ရေးပေးပါ။
+        """
 
         script = ""
         if client and os.path.exists(extracted_audio):
             try:
                 gemini_file = client.files.upload(file=extracted_audio)
-                prompt = """
-                ဤအသံဖိုင်ထဲတွင် ဇာတ်ကောင်များ အစမှ အဆုံးအထိ ပြောဆိုနေသော စကားများကို အတိအကျ နားထောင်ပါ။ 
-                ဇာတ်လမ်းကို အပြင်ကနေ ရှင်းပြခြင်း (Narrator Style/Storyteller) လုံးဝ မလုပ်ပါနှင့်။ အတိုချုံ့ခြင်း မလုပ်ပါနှင့်။
-                
-                ဇာတ်ကောင်တွေ အချင်းချင်း ပြောဆိုနေသည့် စကားများကို အချိန်နှင့်အမျှ မြန်မာလို တိုက်ရိုက် စကားပြန် (Dialogue Dubbing) အဖြစ်သာ အပြည့်အစုံ ပြန်ဆိုပေးပါ။
-                
-                ဥပမာ -
-                "ဒီမှာ ဘာဖြစ်နေတာလဲ"
-                "မင်း အခု ချက်ချင်း ရပ်လိုက်တော့"
-                "သမီးလေး နေကောင်းရဲ့လား"
-                "ငါ မင်းကို လုံးဝ ခွင့်မလွှတ်နိုင်ဘူး"
-                
-                လိုအပ်ချက် -
-                - နိဒါန်း၊ နိဂုံး၊ ရှင်းလင်းချက် ခေါင်းစဉ်များ လုံးဝ မပါရ။
-                - ဇာတ်ကောင်ပြောစကား စစ်စစ်များသာ အစမှ အဆုံးအထိ ဆက်တိုက် ရေးပေးပါ။
-                """
                 response = client.models.generate_content(
                     model="gemini-2.0-flash",
                     contents=[gemini_file, prompt]
                 )
                 script = response.text.strip()
-            except Exception as ex:
+            except Exception:
                 script = ""
 
         if not script:
-            script = "ဒီမှာ ဘာဖြစ်နေတာလဲ။ မင်း အခု ချက်ချင်း ရပ်လိုက်တော့။ ငါ မင်းကို လုံးဝ ခွင့်မလွှတ်နိုင်ဘူး။"
+            script = "ဒီနေရာမှာတော့ ထူးဆန်းတဲ့ အဖြစ်အပျက်တွေ စတင်ခဲ့ပြီး မမျှော်လင့်ဘဲ အခြေအနေတွေ ပြောင်းလဲသွားခဲ့ပါတယ်။"
 
         tasks_db[task_id]["script"] = script
         tasks_db[task_id]["detail"] = "AI Myanmar Voiceover ထုတ်လုပ်နေပါသည်..."
@@ -246,7 +242,7 @@ async def process_one_click_pipeline(task_id: str, input_vid: str, voice: str):
         subprocess.run(cmd, check=True)
 
         tasks_db[task_id]["status"] = "completed"
-        tasks_db[task_id]["detail"] = "✅ One Click Recap ပြီးစီးပါပြီ!"
+        tasks_db[task_id]["detail"] = "✅ ဇာတ်ကြောင်းပြော Recap ပြီးစီးပါပြီ!"
         tasks_db[task_id]["output_video"] = output_vid
 
         if os.path.exists(extracted_audio):
@@ -257,8 +253,8 @@ async def process_one_click_pipeline(task_id: str, input_vid: str, voice: str):
         tasks_db[task_id]["status"] = "failed"
         tasks_db[task_id]["detail"] = f"Error: {str(e)}"
 
-@app.post("/api/one-click-recap")
-async def one_click_recap(
+@app.post("/api/create-story-narration")
+async def create_story_narration(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     voice: str = Form("my-MM-ThihaNeural")
@@ -277,7 +273,7 @@ async def one_click_recap(
     }
 
     background_tasks.add_task(
-        process_one_click_pipeline,
+        process_story_pipeline,
         task_id, input_vid, voice
     )
 
